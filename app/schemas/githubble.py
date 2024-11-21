@@ -11,7 +11,7 @@ class StarNeighbours(BaseModel):
 class StarNeighboursResponse(BaseModel):
     star_neighbours: list[StarNeighbours]
     next: Optional[str] = Field(
-        example=[
+        examples=[
             "/githubble/repos/myuser/myrepo/starneighbours?max_stargazers=100&page=2&per_page=10"
         ]
     )
