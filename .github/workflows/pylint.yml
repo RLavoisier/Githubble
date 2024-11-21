@@ -1,4 +1,4 @@
-name: Python application
+name: Python Application CI
 
 on:
   push:
@@ -11,27 +11,42 @@ permissions:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python 3.13
-      uses: actions/setup-python@v3
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
       with:
         python-version: "3.13"
-    - name: Install dependencies
+
+    - name: Install Poetry
       run: |
         curl -sSL https://install.python-poetry.org | python3 -
+      env:
+        POETRY_HOME: $HOME/.poetry
+
+    - name: Add Poetry to PATH
+      run: echo "$HOME/.poetry/bin" >> $GITHUB_PATH
+
+    - name: Cache Poetry dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pypoetry
+        key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-poetry-
+
     - name: Install dependencies with Poetry
       run: |
         poetry install --no-interaction --no-root
-        python -m pip install --upgrade pip
-        pip install pre-commit
-        pip install pytest
+
     - name: Run linters
       run: |
-        pre-commit run --all-files
-    - name: Test with pytest
+        poetry run pre-commit run --all-files
+
+    - name: Run tests with pytest
       run: |
-        py.test
+        poetry run pytest --maxfail=5 --disable-warnings
