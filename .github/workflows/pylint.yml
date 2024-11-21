@@ -20,7 +20,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: "3.13"
+        python-version: "3.11"
 
     - name: Install Poetry
       run: |
@@ -31,22 +31,21 @@ jobs:
     - name: Add Poetry to PATH
       run: echo "$HOME/.poetry/bin" >> $GITHUB_PATH
 
-    - name: Cache Poetry dependencies
-      uses: actions/cache@v3
-      with:
-        path: ~/.cache/pypoetry
-        key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-poetry-
+    - name: Configure Poetry
+      run: |
+        poetry config virtualenvs.in-project true 
 
     - name: Install dependencies with Poetry
       run: |
         poetry install --no-interaction --no-root
 
-    - name: Run linters
+    - name: Add virtual environment to PATH
+      run: echo "${{ github.workspace }}/.venv/bin" >> $GITHUB_PATH
+
+    - name: Run linters with pre-commit
       run: |
-        poetry run pre-commit run --all-files
+        pre-commit run --all-files
 
     - name: Run tests with pytest
       run: |
-        poetry run pytest --maxfail=5 --disable-warnings
+        pytest --maxfail=5 --disable-warnings
