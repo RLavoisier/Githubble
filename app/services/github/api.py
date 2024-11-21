@@ -111,32 +111,34 @@ class GitHubAPI:
             nb_pages = await self.get_nb_pages(response)
             if limit is None:
                 limit = nb_pages * per_page
-
             # Fetch remaining pages concurrently
             if nb_pages > 1 and limit > self.GITHUB_PER_PAGE:
                 # We are computing the remaining pages based on the limit
                 needed_pages = limit // self.GITHUB_PER_PAGE
-                tasks = [
-                    asyncio.create_task(self.make_request(f"{url}&page={i}"))
-                    for i in range(2, needed_pages + 1)
-                ]
+
+                responses = await asyncio.gather(
+                    *[
+                        self.make_request(f"{url}&page={i}")
+                        for i in range(2, needed_pages + 1)
+                    ],
+                    return_exceptions=True,
+                )
 
                 # If there is remaining records, we add an extra page with those
                 remaining_records = limit % self.GITHUB_PER_PAGE
                 if remaining_records != 0:
                     url = self.get_endpoint_url(endpoint, per_page=remaining_records)
-                    tasks.append(
-                        asyncio.create_task(
-                            self.make_request(f"{url}&page={needed_pages + 1}")
-                        )
+                    responses.append(
+                        await self.make_request(f"{url}&page={needed_pages + 1}")
                     )
 
-                for task in asyncio.as_completed(tasks):
-                    try:
-                        response = await task
+                for response in responses:
+                    if isinstance(response, Exception):
+                        continue
+                    else:
                         data.extend(await formatter(response))
-                    except Exception as e:
-                        logger.warning(f"Failed to fetch page: {e}")
+        except HTTPException:
+            raise
         except Exception as e:
             logger.error(f"Failed to fetch data from {url}: {e}")
         return data
@@ -152,7 +154,8 @@ class GitHubAPI:
         stargazers = await self.get_paginated_data(
             endpoint, formatter, limit=max_stargazers
         )
-        await self.redis_client.set_cache_value(cache_key, stargazers)
+        if stargazers:
+            await self.redis_client.set_cache_value(cache_key, stargazers)
         return stargazers
 
     async def get_starred_repos_by_username(
@@ -164,7 +167,8 @@ class GitHubAPI:
         endpoint = f"users/{username}/starred"
         formatter = StarredRepositoryFormater()
         starred_repos = await self.get_paginated_data(endpoint, formatter)
-        await self.redis_client.set_cache_value(cache_key, starred_repos)
+        if starred_repos:
+            await self.redis_client.set_cache_value(cache_key, starred_repos)
         return username, starred_repos
 
     async def close(self):

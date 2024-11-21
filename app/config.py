@@ -18,7 +18,6 @@ class Settings(BaseSettings):
     # Redis
     redis_url: RedisDsn
     redis_default_expiration_time: int = 3600 * 24
-    use_redis_cache: bool
 
     model_config = SettingsConfigDict(env_file=ENV_FILE, env_file_encoding="utf-8")
 

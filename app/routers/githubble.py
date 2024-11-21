@@ -1,13 +1,15 @@
 import asyncio
 import logging
 from collections import defaultdict
-from typing import Annotated, DefaultDict
+from typing import Annotated, DefaultDict, Any
 
 from fastapi import APIRouter, HTTPException
 from fastapi.params import Query, Depends
 from httpx import HTTPStatusError
 
+from app.models import User
 from app.redis.engine import get_redis_client
+from app.routers.user import validate_api_key
 from app.schemas.githubble import StarNeigboursResponse
 from app.services.github.api import GitHubAPI, settings
 
@@ -23,11 +25,21 @@ def get_github_api():
     )
 
 
-@router.get("/repos/{user}/{repo}/starneighbours")
+@router.get(
+    "/repos/{user}/{repo}/starneighbours",
+    summary="Retrieve the neighbour repositories based on the stargazers.",
+    description=(
+        """
+        You can fetch the neighbour repositories of a given repository based on its stargazers. 
+        The result will be ordered by common stargarzers amount.
+        """
+    ),
+)
 async def get_repo_star_neighbours(
     user: str,
     repo: str,
     github_api: Annotated[GitHubAPI, Depends(get_github_api)],
+    auth_user: User = Depends(validate_api_key),
     max_stargazers: int = Query(20, ge=1, le=1000),
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1, le=100),
@@ -50,18 +62,21 @@ async def get_repo_star_neighbours(
 
     neighbours_repos[repo] = base_repo_stargazers_set
 
-    starred_tasks = [
-        asyncio.create_task(github_api.get_starred_repos_by_username(username))
-        for username in base_repo_stargazers_set
-    ]
+    starred_repos_results: Any = await asyncio.gather(
+        *[
+            github_api.get_starred_repos_by_username(username)
+            for username in base_repo_stargazers_set
+        ],
+        return_exceptions=True,
+    )
 
-    for starred_task in asyncio.as_completed(starred_tasks):
-        try:
-            username, starred_repos = await starred_task
-            for starred_repo in starred_repos:
-                neighbours_repos[starred_repo].add(username)
-        except HTTPStatusError as e:
-            logger.warning(f"Failed to fetch starred repos for a user: {e}")
+    for result in starred_repos_results:
+        if isinstance(result, Exception):
+            logger.warning(f"Failed to fetch starred repos: {result}")
+            continue
+        username, starred_repos = result
+        for starred_repo in starred_repos:
+            neighbours_repos[starred_repo].add(username)
 
     neighbours_repos_list = sorted(
         [
