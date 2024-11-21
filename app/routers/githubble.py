@@ -3,14 +3,14 @@ import logging
 from collections import defaultdict
 from typing import Annotated, DefaultDict, Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.params import Query, Depends
 from httpx import HTTPStatusError
 
 from app.models import User
 from app.redis.engine import get_redis_client
 from app.routers.user import validate_api_key
-from app.schemas.githubble import StarNeigboursResponse
+from app.schemas.githubble import StarNeighboursResponse, StarNeighbours
 from app.services.github.api import GitHubAPI, settings
 
 router = APIRouter(prefix="/githubble", tags=["githubble"])
@@ -38,12 +38,13 @@ def get_github_api():
 async def get_repo_star_neighbours(
     user: str,
     repo: str,
+    req: Request,
     github_api: Annotated[GitHubAPI, Depends(get_github_api)],
     auth_user: User = Depends(validate_api_key),
     max_stargazers: int = Query(20, ge=1, le=1000),
     page: int = Query(1, ge=1),
     per_page: int = Query(10, ge=1, le=100),
-) -> list[StarNeigboursResponse]:
+) -> StarNeighboursResponse:
     neighbours_repos: DefaultDict[str, set[str]] = defaultdict(set)
     try:
         repo_stargazers = await github_api.get_stargazers_by_repo(
@@ -56,7 +57,7 @@ async def get_repo_star_neighbours(
         )
 
     if not repo_stargazers:
-        return []
+        return StarNeighboursResponse(star_neighbours=[], next=None)
 
     base_repo_stargazers_set = {stargazer["login"] for stargazer in repo_stargazers}
 
@@ -80,9 +81,7 @@ async def get_repo_star_neighbours(
 
     neighbours_repos_list = sorted(
         [
-            StarNeigboursResponse.model_validate(
-                {"repo": repo_name, "stargazers": stargazers}
-            )
+            StarNeighbours.model_validate({"repo": repo_name, "stargazers": stargazers})
             for repo_name, stargazers in neighbours_repos.items()
         ],
         key=lambda r: len(r.stargazers),
@@ -90,4 +89,10 @@ async def get_repo_star_neighbours(
     )
     pagination_start = (page - 1) * per_page
     pagination_end = pagination_start + per_page
-    return neighbours_repos_list[pagination_start:pagination_end]
+    paginated_response = neighbours_repos_list[pagination_start:pagination_end]
+
+    next_url = None
+    if pagination_end < len(neighbours_repos_list):
+        next_url = str(req.url.include_query_params(page=page + 1, per_page=per_page))
+
+    return StarNeighboursResponse(star_neighbours=paginated_response, next=next_url)

@@ -1,6 +1,7 @@
 from unittest.mock import Mock
 
 import httpx
+import orjson
 import pytest
 
 from app.services.github.formaters import StargazersFormater, StarredRepositoryFormater
@@ -14,8 +15,9 @@ class TestStargazersFormater:
             {"login": "test_login2", "html_url": "http://test2.com", "useless_key": 0},
             {"login": "test_login3", "html_url": "http://test3.com", "useless_key": 0},
         ]
+        json_bytes = orjson.dumps(json_response)
         response = Mock(spec=httpx.Response)
-        response.json = Mock(return_value=json_response)
+        response.content = json_bytes
         formater = StargazersFormater()
 
         result = await formater(response)
@@ -43,8 +45,9 @@ class TestStarredRepositoryFormater:
                 "useless_key": 0,
             },
         ]
+        json_bytes = orjson.dumps(json_response)
         response = Mock(spec=httpx.Response)
-        response.json = Mock(return_value=json_response)
+        response.content = json_bytes
         formater = StarredRepositoryFormater()
 
         result = await formater(response)
