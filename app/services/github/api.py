@@ -51,6 +51,9 @@ class GitHubAPI:
         return f"{self.base_url}{endpoint}?per_page={per_page or self.GITHUB_PER_PAGE}"
 
     async def handle_rate_limit(self, response: httpx.Response):
+        """
+        We Handle the github rate limit by addding a flag to our redis cache and avoid useless requests
+        """
         if int(response.headers.get("X-RateLimit-remaining", 1)) < 1:
             reset_timestamp = int(response.headers["X-RateLimit-Reset"])
             lock_duration = reset_timestamp - int(time())
@@ -85,6 +88,11 @@ class GitHubAPI:
             return response
 
     async def get_nb_pages(self, response: httpx.Response) -> int:
+        """
+        Extracting the last page from the links header, formatted like so :
+        <https://api.github.com/repositories/160919119/stargazers?per_page=100&page=2>; rel="next",
+        <https://api.github.com/repositories/160919119/stargazers?per_page=100&page=400>; rel="last"
+        """
         if "last" not in response.links:
             return 1
         last_link = response.links["last"]["url"]

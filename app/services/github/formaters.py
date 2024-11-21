@@ -6,6 +6,10 @@ from httpx import Response
 
 
 class GithubResponseFormatter(ABC):
+    """
+    Base formatter handling the github api response transformation
+    """
+
     async def __call__(self, response: Response) -> Any:
         return await self._format_json_resonse(orjson.loads(response.content))
 
