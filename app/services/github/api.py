@@ -7,7 +7,7 @@ from fastapi import HTTPException
 import httpx
 
 from app.config import get_settings
-from app.redis.engine import RedisClient
+from app.redis.engine import RedisClient, get_redis_client
 from app.services.github.formaters import (
     GithubResponseFormatter,
     StargazersFormater,
@@ -173,3 +173,11 @@ class GitHubAPI:
 
     async def close(self):
         await self.client.aclose()
+
+
+def get_github_api():
+    return GitHubAPI(
+        base_url=str(settings.github_api_base_url),
+        redis_client=get_redis_client(),
+        token=settings.github_token,
+    )

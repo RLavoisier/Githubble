@@ -8,21 +8,12 @@ from fastapi.params import Query, Depends
 from httpx import HTTPStatusError
 
 from app.models import User
-from app.redis.engine import get_redis_client
 from app.routers.user import validate_api_key
 from app.schemas.githubble import StarNeighboursResponse, StarNeighbours
-from app.services.github.api import GitHubAPI, settings
+from app.services.github.api import GitHubAPI, get_github_api
 
 router = APIRouter(prefix="/githubble", tags=["githubble"])
 logger = logging.getLogger(__name__)
-
-
-def get_github_api():
-    return GitHubAPI(
-        base_url=settings.github_api_base_url,
-        redis_client=get_redis_client(),
-        token=settings.github_token,
-    )
 
 
 @router.get(
