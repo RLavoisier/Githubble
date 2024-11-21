@@ -22,6 +22,7 @@ settings = get_settings()
 class GitHubAPI:
     GITHUB_PER_PAGE = 100
     AIO_SEMAPHORE_LIMIT = 200
+    MAX_REPO_PER_STARGAZERS = 100
 
     def __init__(
         self, base_url: str, redis_client: RedisClient, token: Optional[str] = None
@@ -167,7 +168,7 @@ class GitHubAPI:
         return stargazers
 
     async def get_starred_repos_by_username(
-        self, username: str, max_repo: int = 100
+        self, username: str, max_repo: int = MAX_REPO_PER_STARGAZERS
     ) -> Tuple[str, list[str]]:
         cache_key = f"{username}_starred_repos"
         if cached_data := await self.redis_client.get_cached_value_by_key(cache_key):
