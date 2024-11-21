@@ -17,7 +17,7 @@ Of course, the more users two projects have in common the closer they are.
 It's quite simple !
 - Clone this repository on your favorite working computer. **IMPORTANT: You need docker to launch the project**
 - **IMPORTANT AS WELL: It's HIGHLY recommended to set a ```GITHUB_TOKEN``` in the app/.env.test file to avoid reaching the GitHub rate limit too fast. Entering a key will give you 5000 request/hour vs 60 request/hour with none.**
-- launch ```make launch``` to create the API stack
+- In a command prompt enter ```make launch``` to create the API stack
 - Open your favorite web browser and go to ```http://127.0.0.1:8000/docs```
 
 ## What is the workflow ?
@@ -30,6 +30,7 @@ The ```/user/create_user``` endpoint allows you to create an account with a POST
 ![Aperçu](assets/screen1.png)
 
 After the creation, you will receive the API Key in the response body
+
 ![Aperçu](assets/screen2.png)
 
 **Note that you can use the ```/user/authenticate``` endpoint to retrieve your api key if you lose it**
