@@ -27,8 +27,6 @@ jobs:
       with:
         virtualenvs-create: true
         virtualenvs-in-project: true
-        virtualenvs-path: .venv
-        installer-parallel: true
 
     - name: Load cached venv
       id: cached-poetry-dependencies
@@ -41,13 +39,13 @@ jobs:
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: poetry install --no-interaction --no-root
 
-    - name: Install project
-      run: poetry install --no-interaction
+    - name: Add virtual environment to PATH
+      run: echo "${{ github.workspace }}/.venv/bin" >> $GITHUB_PATH
 
     - name: Run linters with pre-commit
       run: |
-        pre-commit run --all-files
+        poetry run pre-commit run --all-files
 
     - name: Run tests with pytest
       run: |
-        pytest --maxfail=5 --disable-warnings
+        poetry run pytest --maxfail=5 --disable-warnings
