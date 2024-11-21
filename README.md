@@ -149,4 +149,6 @@ GitHubble is functional but can be enhanced in many ways:
 8. **Database Lifecycle Management:**
    - Implementing Alembic for migrations would simplify schema updates.
 
+9. **Better error handling:**
+   - Better handling of errors feedbacks based on github api status and rate limit usage
 
