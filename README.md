@@ -141,6 +141,7 @@ GitHubble is functional but can be enhanced in many ways:
          ├─ 20.552s GitHubAPI.make_request <-- Main bottleneck
          └─ 2.060s GitHubAPI.get_starred_repos_by_username
      ```
+     I've improved this by limiting the number of repos fetched by user to 100 to avoid exponential growth of requests needed
 
 7. **Asynchronous Caching:**
    - Prefetch data for known repositories in the background for faster responses.

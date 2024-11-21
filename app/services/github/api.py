@@ -21,7 +21,7 @@ settings = get_settings()
 
 class GitHubAPI:
     GITHUB_PER_PAGE = 100
-    AIO_SEMAPHORE_LIMIT = 100
+    AIO_SEMAPHORE_LIMIT = 200
 
     def __init__(
         self, base_url: str, redis_client: RedisClient, token: Optional[str] = None
@@ -159,14 +159,14 @@ class GitHubAPI:
         return stargazers
 
     async def get_starred_repos_by_username(
-        self, username: str
+        self, username: str, max_repo: int = 100
     ) -> Tuple[str, list[str]]:
         cache_key = f"{username}_starred_repos"
         if cached_data := await self.redis_client.get_cached_value_by_key(cache_key):
             return username, cached_data
         endpoint = f"users/{username}/starred"
         formatter = StarredRepositoryFormater()
-        starred_repos = await self.get_paginated_data(endpoint, formatter)
+        starred_repos = await self.get_paginated_data(endpoint, formatter, max_repo)
         if starred_repos:
             await self.redis_client.set_cache_value(cache_key, starred_repos)
         return username, starred_repos
