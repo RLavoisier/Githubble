@@ -1,3 +1,4 @@
+import hashlib
 import json
 import logging
 from typing import Any
@@ -19,9 +20,14 @@ class RedisClient:
         )
         self.default_expiration_time = settings.redis_default_expiration_time
 
+    @staticmethod
+    async def generate_cache_key(key: str) -> str:
+        return hashlib.sha256(key.encode()).hexdigest()
+
     async def get_cached_value_by_key(
         self, cache_key: str, response: Response | None = None
     ) -> Any:
+        cache_key = await self.generate_cache_key(cache_key)
         try:
             if cached_value := await self.redis_client.get(cache_key):
                 if response:
@@ -37,6 +43,7 @@ class RedisClient:
     async def set_cache_value(
         self, cache_key: str, value: Any, ex: int | None = None
     ) -> None:
+        cache_key = await self.generate_cache_key(cache_key)
         await self.redis_client.set(
             cache_key,
             json.dumps(value),
@@ -44,9 +51,11 @@ class RedisClient:
         )
 
     async def key_exists(self, cache_key: str) -> bool:
+        cache_key = await self.generate_cache_key(cache_key)
         return await self.redis_client.exists(cache_key)
 
     async def delete_key(self, cache_key: str):
+        cache_key = await self.generate_cache_key(cache_key)
         return await self.redis_client.delete(cache_key)
 
 

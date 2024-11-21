@@ -3,11 +3,13 @@ import logging
 from datetime import datetime
 from time import time
 from typing import Any, Optional, Tuple
+
 from fastapi import HTTPException
 import httpx
 
 from app.config import get_settings
 from app.redis.engine import RedisClient, get_redis_client
+from app.schemas.github import GitHubAPIResponseSchema
 from app.services.github.formaters import (
     GithubResponseFormatter,
     StargazersFormater,
@@ -71,7 +73,12 @@ class GitHubAPI:
     async def rate_limit_reached(self) -> bool:
         return await self.redis_client.key_exists(self.reset_lock_key)
 
-    async def make_request(self, url: str) -> httpx.Response:
+    async def make_request(self, url: str) -> GitHubAPIResponseSchema:
+        cached_response = await self.redis_client.get_cached_value_by_key(url)
+
+        if cached_response:
+            return GitHubAPIResponseSchema.model_validate(cached_response)
+
         if await self.rate_limit_reached():
             reset_time = await self.redis_client.get_cached_value_by_key(
                 self.reset_time_key
@@ -86,9 +93,11 @@ class GitHubAPI:
             response = await self.client.get(url)
             await self.handle_rate_limit(response)
             response.raise_for_status()
-            return response
+            response = {"links": response.links, "content": response.text}
+            await self.redis_client.set_cache_value(url, response)
+            return GitHubAPIResponseSchema.model_validate(response)
 
-    async def get_nb_pages(self, response: httpx.Response) -> int:
+    async def get_nb_pages(self, response: GitHubAPIResponseSchema) -> int:
         """
         Extracting the last page from the links header, formatted like so :
         <https://api.github.com/repositories/160919119/stargazers?per_page=100&page=2>; rel="next",
@@ -114,10 +123,10 @@ class GitHubAPI:
         data = []
         try:
             # Fetch the first page
-            response = await self.make_request(url)
-            data.extend(await formatter(response))
+            first_page_response = await self.make_request(url)
+            data.extend(await formatter(first_page_response))
             # Determine number of pages
-            nb_pages = await self.get_nb_pages(response)
+            nb_pages = await self.get_nb_pages(first_page_response)
             if limit is None:
                 limit = nb_pages * per_page
             # Fetch remaining pages concurrently
@@ -142,10 +151,9 @@ class GitHubAPI:
                     )
 
                 for response in responses:
-                    if isinstance(response, Exception):
+                    if not isinstance(response, GitHubAPIResponseSchema):
                         continue
-                    else:
-                        data.extend(await formatter(response))
+                    data.extend(await formatter(response))
         except HTTPException:
             raise
         except Exception as e:
@@ -155,29 +163,19 @@ class GitHubAPI:
     async def get_stargazers_by_repo(
         self, owner: str, repo: str, max_stargazers: int
     ) -> list[dict[str, Any]]:
-        cache_key = f"{owner}_{repo}_stargazers_{max_stargazers}"
-        if cached_data := await self.redis_client.get_cached_value_by_key(cache_key):
-            return cached_data
         endpoint = f"repos/{owner}/{repo}/stargazers"
         formatter = StargazersFormater()
         stargazers = await self.get_paginated_data(
             endpoint, formatter, limit=max_stargazers
         )
-        if stargazers:
-            await self.redis_client.set_cache_value(cache_key, stargazers)
         return stargazers
 
     async def get_starred_repos_by_username(
         self, username: str, max_repo: int = MAX_REPO_PER_STARGAZERS
     ) -> Tuple[str, list[str]]:
-        cache_key = f"{username}_starred_repos"
-        if cached_data := await self.redis_client.get_cached_value_by_key(cache_key):
-            return username, cached_data
         endpoint = f"users/{username}/starred"
         formatter = StarredRepositoryFormater()
         starred_repos = await self.get_paginated_data(endpoint, formatter, max_repo)
-        if starred_repos:
-            await self.redis_client.set_cache_value(cache_key, starred_repos)
         return username, starred_repos
 
     async def close(self):
