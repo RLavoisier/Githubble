@@ -26,9 +26,11 @@ jobs:
     - name: Install dependencies with Poetry
       run: |
         poetry install --no-interaction --no-root
+        python -m pip install --upgrade pip
+        pip install pre-commit
     - name: Run linters
       run: |
         pre-commit run --all-files
     - name: Test with pytest
       run: |
-        pytest
+        py.test
