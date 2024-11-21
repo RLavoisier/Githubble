@@ -1,137 +1,151 @@
-# Githubble
 
-Welcome to GitHubble !
+# **GitHubble**
 
-## What on earth is this ?
-GitHubble is an API that allows you to fetch what we call "neighbours repositories" for any given Github repository.
+Welcome to **GitHubble**!
 
-## Ok but what is "neighbours repositories"
-**We define a neighbour of a repository A as a repository B that has been starred by a same user.**
+## 🌟 What is GitHubble?
 
-> For example, if `joe` adds a star to the repository `projectA` and `projectB`, we define those repositories `projectA` and `projectB` as being *neighbours*.
-> 
+GitHubble is an API that helps you explore "neighbour repositories" on GitHub. It's a tool for discovering related repositories based on shared stargazers.
 
-Of course, the more users two projects have in common the closer they are.
+---
 
-## Sounds great ! How can I use it ?
-It's quite simple !
-- Clone this repository on your favorite working computer. **IMPORTANT: You need docker to launch the project**
-- **IMPORTANT AS WELL: It's HIGHLY recommended to set a ```GITHUB_TOKEN``` in the app/.env.test file to avoid reaching the GitHub rate limit too fast. Entering a key will give you 5000 request/hour vs 60 request/hour with none.**
-- In a command prompt enter ```make launch``` to create the API stack
-- Open your favorite web browser and go to ```http://127.0.0.1:8000/docs```
+## 🧐 What are "neighbour repositories"?
 
-## What is the workflow ?
-Githubble uses a simple API workflow based on API key authentication. The first step is to get one of those.
+We define a *neighbour repository* as follows:
 
-**You can use the API directly through the openapi doc !**
+> **Two repositories are neighbours if at least one user has starred both.**
 
-The ```/user/create_user``` endpoint allows you to create an account with a POST, given an email and a password. We promise that you won't receive any spams
+For example:
+- If user `joe` stars both `projectA` and `projectB`, then `projectA` and `projectB` are considered neighbours.
+- The more users star both repositories, the closer the repositories are.
 
-![Aperçu](assets/screen1.png)
+---
 
-After the creation, you will receive the API Key in the response body
+## 🚀 How to get started?
 
-![Aperçu](assets/screen2.png)
+### Prerequisites:
+1. **Clone this repository:**
+   ```bash
+   git clone https://github.com/your-username/GitHubble.git
+   cd GitHubble
+   ```
 
-**Note that you can use the ```/user/authenticate``` endpoint to retrieve your api key if you lose it**
+2. **Install Docker:**  
+   Make sure Docker is installed and running on your system.
 
-Now that you have your precious API Key, you need to set it in the header of your requests in the ``` X-API-Key``` field.
+3. **Set your GitHub Token:**  
+   Update the `app/.env.test` file with your `GITHUB_TOKEN`.  
+   **Why?**: Without a token, the GitHub API limits requests to 60 per hour. With a token, you can make up to **5000 requests per hour**.
 
-If you use the openapi doc, you need to enter your API Key in the ``Àuthorize`` screen at the top
+### Launch the API:
+- Run the following command to start the stack:
+   ```bash
+   make launch
+   ```
 
-![Aperçu](assets/screen3.png)
+- Open your web browser and visit:  
+  👉 **[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)**
 
-![Aperçu](assets/screen4.png)
+---
 
-## I'm set ! I want to see the stars !
-The ```/githubble/repos/{user}/{repo}/starneighbours``` endpoint is the meat of this API. Here are the parameters:
-- **user**: The Github username.
-- **repo**: The repo name
-- **max_stargazers**: Only collect a limited amount of stargazers for the given repo.
-- **page**: The current result page
-- **per_page**: The number of neighbour repos per page
+## 🛠️ Workflow Overview
 
-The response will give you the list of neighbour repositories containing a list of stargazers found in the requested repository.
-The list is ordered by the amount of common stargazers:
+GitHubble uses an API-key-based authentication system. Here's how to get started:
 
-```
+### Step 1: Create a User
+Use the `/user/create_user` endpoint to create an account with your email and password.  
+
+** 💡 You can test this directly from the OpenAPI documentation interface.**
+
+Example:
+- Request:  
+    ![Create User Request](assets/screen1.png)
+
+- Response (API key provided):  
+    ![Create User Response](assets/screen2.png)
+
+### Step 2: Use Your API Key
+- Add your API key to the `X-API-Key` header of your requests.
+- If you're using the OpenAPI documentation, click on the **Authorize** button and enter your key.
+
+Example:  
+![Authorize](assets/screen3.png)
+
+Once authenticated, you're ready to explore the stars!
+
+---
+
+## ✨ Explore Neighbour Repositories
+
+The endpoint `/githubble/repos/{user}/{repo}/starneighbours` is the heart of GitHubble.  
+
+### Parameters:
+- **`user`**: GitHub username.
+- **`repo`**: Repository name.
+- **`max_stargazers`**: Limit the number of stargazers fetched (default: 20, max: 1000).
+- **`page`**: Pagination for the results.
+- **`per_page`**: Number of neighbour repositories per page.
+
+### Example Response:
+The API returns neighbour repositories sorted by the number of shared stargazers.
+
+```json
 [
   {
     "repo": "encode/uvicorn",
-    "stargazers": [
-      "tihomirptotev",
-      "Koomook",
-      "pratos",
-      "jhermann",
-      "woile",
-      "podhmo",
-      "headsrooms",
-      "jordaneremieff",
-      "mbarkhau",
-      "Gr1N",
-      "thedrow",
-      "fracaron",
-      "py7hon",
-      "laith43d"
-    ]
+    "stargazers": ["user1", "user2", "user3"]
   },
   {
     "repo": "encode/apistar",
-    "stargazers": [
-      "nkonin",
-      "pratos",
-      "jhermann",
-      "oroszgy",
-      "woile",
-      "headsrooms",
-      "jordaneremieff",
-      "mbarkhau",
-      "Gr1N",
-      "checkaayush",
-      "thedrow",
-      "fracaron",
-      "laith43d"
-    ]
-  },
-  {
-    "repo": "fastapi/typer",
-    "stargazers": [
-      "tihomirptotev",
-      "jhermann",
-      "oroszgy",
-      "woile",
-      "mariacamilagl",
-      "headsrooms",
-      "jordaneremieff",
-      "mbarkhau",
-      "Gr1N",
-      "thedrow",
-      "danielfrg",
-      "fracaron",
-      "laith43d"
-    ]
+    "stargazers": ["user2", "user3"]
   }
 ]
 ```
 
-## Awesome, but how does it work under the hood ?
+---
 
-The technical stack of this API is :
-- A FastApi app running on a docker image
-- A redis server running on another docker image for caching purpose
-- A PostgresSQL server running on a third docker image for the user management
+## 🛠️ Technical Stack
 
-## I see ! And is this API absolutely perfect ?
+The GitHubble architecture includes:
+- **FastAPI**: For the API backend.
+- **Redis**: For caching GitHub responses.
+- **PostgreSQL**: For user and API key management.
+- **Docker**: To containerize the entire stack.
 
-Of course !.....Not !
+---
 
-Here are some of the many areas of improvements :
+## ⚡ Areas for Improvement
 
-- **More efficient caching system**: I've implemented a simple cache functionnality to avoid reaching the GitHub rate limit, but it could be more granular and more flexible
-- **Better Test Coverage**: I admit that I auto generate quite a lot of unit tests to be able to finish this project on the time frame I had available. Those could be improved.
-- **Better user management**: The user management I've develop here is quite straight forward. It can be improved with more complex authentication handling (using the fastapi-user library for example)
-- **The user management could be separated**: On a real environnement the user functionnality could be a service outside the api. The token could then be validated by an API gateway for example. This would allow the API to be easily scalable.
-- **Better config and secret management**: For this test i've used a straigh forward setting configuration based on an .env file. Using a proper secret management would be mandatory in a production environnement
-- **Better performances**: The api can be quite slow for big requests. I've used asyncio to do multiple requests at the same time but this could be greatly improved.
-- **Asynchronous stargazers caching**: It could be interesting to create asynchronous tasks to pre-fetch the data from already known repositories on a full fledge system
-- **Better database lifecycle management**: The use of alembic could greatly improve the database life cycle if the user table needs to be change or new tables added at some point
+GitHubble is functional but can be enhanced in many ways:
+
+1. **Efficient Caching:**
+   - Current caching avoids API rate limits but lacks granularity. Smarter cache strategies could improve performance.
+
+2. **Test Coverage:**
+   - Some unit tests were autogenerated due to time constraints and could be more robust.
+
+3. **Advanced User Management:**
+   - Integrating libraries like `fastapi-users` could improve authentication and user lifecycle management.
+
+4. **Service Scalability:**
+   - User management could be decoupled into a separate service, enabling the API to scale independently.
+
+5. **Configuration Management:**
+   - Replace `.env` files with a centralized secret management system for production use.
+
+6. **Performance Optimizations:**
+   - Profiling reveals bottlenecks in the GitHub API requests. Here's a sample profiling result for 100 stargazers:
+     ```
+     28.726s _UnixSelectorEventLoop.run_forever
+     └─ 27.033s Handle._run
+         ├─ 20.552s GitHubAPI.make_request <-- Main bottleneck
+         └─ 2.060s GitHubAPI.get_starred_repos_by_username
+     ```
+
+7. **Asynchronous Caching:**
+   - Prefetch data for known repositories in the background for faster responses.
+
+8. **Database Lifecycle Management:**
+   - Implementing Alembic for migrations would simplify schema updates.
+
+
